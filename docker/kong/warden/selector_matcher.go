@@ -2,7 +2,7 @@ package main
 
 import "strings"
 
-const PAIR_SEPARATOR = "|"
+const SEPARATOR = "/"
 const STRING_EQUAL = "sq"
 const STRING_IN = "si"
 const BOOLEAN_TRUE = "bt"
@@ -20,24 +20,25 @@ func AttributeMatch(payload map[string]interface{}, resourceMatcher []string) bo
 }
 
 func evaluateSelector(payload map[string]interface{}, pattern string) bool {
-	segments := strings.Split(pattern, PAIR_SEPARATOR)
+	segments := strings.Split(pattern, SEPARATOR)
 	effect := segments[0]
 	matcher := segments[1:]
-	for _, attrpair := range matcher {
-		if EFFECT_DENNY == effect && evaluateAttribute(payload, attrpair) {
-			return false
-		}
-		if EFFECT_ALLOW == effect && !evaluateAttribute(payload, attrpair) {
-			return false
+
+	for i, attrpair := range matcher {
+		if i%2 == 0 {
+			if EFFECT_DENNY == effect && evaluateAttribute(payload, attrpair, matcher[i+1]) {
+				return false
+			}
+			if EFFECT_ALLOW == effect && !evaluateAttribute(payload, attrpair, matcher[i+1]) {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-func evaluateAttribute(payload map[string]interface{}, pattern string) bool {
-	segments := strings.Split(pattern, "/")
-	key := segments[0]
-	opval := strings.Split(segments[1], ":")
+func evaluateAttribute(payload map[string]interface{}, key, rawVal string) bool {
+	opval := strings.Split(rawVal, ":")
 
 	op := opval[0]
 

@@ -37,36 +37,36 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1"} `),
 			matcher: []string{
-				"a|user_id/si:2,3",
+				"a/user_id/si:2,3",
 			},
 			expected: false,
 		},
 		{
 			payload: jsonToGeneric(` {"user_id": "3"} `),
 			matcher: []string{
-				"a|user_id/si:2,3",
+				"a/user_id/si:2,3",
 			},
 			expected: true,
 		},
 		{
 			payload: jsonToGeneric(` {"user_id": "1"} `),
 			matcher: []string{
-				"a|user_id/sq:1",
+				"a/user_id/sq:1",
 			},
 			expected: true,
 		},
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : true} `),
 			matcher: []string{
-				"a|active/bt:t",
+				"a/active/bt:t",
 			},
 			expected: true,
 		},
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : false} `),
 			matcher: []string{
-				"a|active/bf:f",
-				"a|block/bf:t",
+				"a/active/bf:f",
+				"a/block/bf:t",
 			},
 			expected: true,
 			title:    "multiple matcher allow",
@@ -74,8 +74,8 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : false} `),
 			matcher: []string{
-				"a|active/bf:f",
-				"d|block/bf:t",
+				"a/active/bf:f",
+				"d/block/bf:t",
 			},
 			expected: false,
 			title:    "multiple matcher combine allow & deny",
@@ -83,8 +83,8 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : true} `),
 			matcher: []string{
-				"a|active/bf:f",
-				"d|block/bf:t",
+				"a/active/bf:f",
+				"d/block/bf:t",
 			},
 			expected: true,
 			title:    "multiple matcher combine allow & deny, deny unmatch",
@@ -92,7 +92,7 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : true} `),
 			matcher: []string{
-				"a|active/bf|user_id/sq:1|block/bt",
+				"a/active/bf/user_id/sq:1/block/bt",
 			},
 			expected: true,
 			title:    "one selector multiple attribute all match",
@@ -100,7 +100,7 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : true} `),
 			matcher: []string{
-				"a|active/bf|user_id/sq:1|block/bf",
+				"a/active/bf/user_id/sq:1/block/bf",
 			},
 			expected: false,
 			title:    "one selector multiple attribute one unmatch",
@@ -108,8 +108,8 @@ func TestAttributeMatch(t *testing.T) {
 		{
 			payload: jsonToGeneric(` {"user_id": "1", "active" : false, "block" : true} `),
 			matcher: []string{
-				"a|active/bf|user_id/sq:1|block/bf",
-				"d|block/bf",
+				"a/active/bf/user_id/sq:1/block/bf",
+				"d/block/bf",
 			},
 			expected: false,
 			title:    "mutli selector multiple attribute & one match in deny",
