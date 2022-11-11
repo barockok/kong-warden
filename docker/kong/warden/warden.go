@@ -1,8 +1,8 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"regexp"
 
@@ -12,6 +12,7 @@ import (
 
 const actionTagRE = "warden-action:(.*)"
 const errorActionTagNotFound = "Action Tag Not Found"
+const HeaderWardenAbilities = "X-Warden-Abilities"
 
 func actionTagMatcher(s string) string {
 	re := regexp.MustCompile(actionTagRE)
@@ -51,20 +52,33 @@ func GetRouteAction(kong *pdk.PDK) (string, error) {
 	return "", errors.New(errorActionTagNotFound)
 }
 
-func (conf Config) Access(kong *pdk.PDK) {
-	host, err := kong.Request.GetHeader("host")
-	if err != nil {
-		log.Printf("Error reading 'host' header: %s", err.Error())
+type WardenAbility struct {
+	Action string `json:"action"`
+}
+
+func EvaluateAbility(action, rawWardenAbility string) bool {
+	var abilities []WardenAbility
+	json.Unmarshal([]byte(rawWardenAbility), &abilities)
+	for _, ability := range abilities {
+		if action == ability.Action {
+			return true
+		}
 	}
+	return false
+}
+
+func (conf Config) Access(kong *pdk.PDK) {
 	action, err := GetRouteAction(kong)
 	if err != nil {
 		log.Printf("[Warning] Get Route Action, %s", err.Error())
 	}
 
-	message := conf.Message
-	if message == "" {
-		message = "hello"
+	warWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
+
+	if err != nil {
+		log.Printf("[Warning] Get Warnden Ability, %s", err.Error())
 	}
-	kong.Response.SetHeader("x-hello-from-go", fmt.Sprintf("Go says %s to %s", message, host))
+
 	kong.Response.SetHeader("x-warden-action", action)
+	kong.Response.SetHeader("x-warden-ability", warWardenAbility)
 }
