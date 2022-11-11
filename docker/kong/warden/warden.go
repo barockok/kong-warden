@@ -81,4 +81,28 @@ func (conf Config) Access(kong *pdk.PDK) {
 
 	kong.Response.SetHeader("x-warden-action", action)
 	kong.Response.SetHeader("x-warden-ability", warWardenAbility)
+
+	if !EvaluateAbility(action, warWardenAbility) {
+		kong.Response.ExitStatus(403)
+	}
+}
+
+func (conf Config) Response(kong *pdk.PDK) {
+	action, err := GetRouteAction(kong)
+	if err != nil {
+		log.Printf("[Warning] Get Route Action, %s", err.Error())
+	}
+
+	warWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
+
+	if err != nil {
+		log.Printf("[Warning] Get Warnden Ability, %s", err.Error())
+	}
+
+	kong.Response.SetHeader("x-warden-action", action)
+	kong.Response.SetHeader("x-warden-ability", warWardenAbility)
+
+	if !EvaluateAbility(action, warWardenAbility) {
+		kong.Response.ExitStatus(403)
+	}
 }
