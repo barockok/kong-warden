@@ -114,6 +114,41 @@ func TestAttributeMatch(t *testing.T) {
 			expected: false,
 			title:    "mutli selector multiple attribute & one match in deny",
 		},
+		{
+			payload: jsonToGeneric(` {"address" : {"city" : "seatle"} } `),
+			matcher: []string{
+				"a/address.city/sq:seatle",
+			},
+			expected: true,
+			title:    "nested attribute matcher",
+		},
+		{
+			payload: jsonToGeneric(` {"address" : {"city" : "seatle"} } `),
+			matcher: []string{
+				"d/address.city/sq:seatle",
+			},
+			expected: false,
+			title:    "nested attribute matcher",
+		},
+		{
+			payload: jsonToGeneric(` {"address" : {"city" : "newyork"} } `),
+			matcher: []string{
+				"d/address.city/sq:seatle",
+				"a/address.city/sq:newyork",
+			},
+			expected: true,
+			title:    "nested attribute matcher",
+		},
+		{
+			payload: jsonToGeneric(` {"address" : {"city" : "seattle"} } `),
+			matcher: []string{
+				"d/eyeColor/sq:blue",
+				"a/eyeColor/sq:red",
+				"d/address.city/sq:seattle",
+			},
+			expected: false,
+			title:    "nested attribute matcher",
+		},
 	} {
 		title := skena.title
 		if title == "" {

@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
 
 const SEPARATOR = "/"
 const STRING_EQUAL = "sq"
@@ -41,36 +44,62 @@ func evaluateAttribute(payload map[string]interface{}, key, rawVal string) bool 
 	opval := strings.Split(rawVal, ":")
 
 	op := opval[0]
-
+	valInterface := getKeyVal(payload, key)
+	if checkNilInterface(valInterface) {
+		return false
+	}
 	if op == STRING_EQUAL {
-		return stringEqual(getKeyVal(payload, key).(string), opval[1])
+		return stringEqual(valInterface, opval[1])
 	}
 	if op == STRING_IN {
-		return stringInclude(getKeyVal(payload, key).(string), opval[1])
+		return stringInclude(valInterface, opval[1])
 	}
 	if op == BOOLEAN_TRUE {
-		return booleanTrue(getKeyVal(payload, key).(bool))
+		return booleanTrue(valInterface)
 	}
 	if op == BOOLEAN_FALSE {
-		return !booleanTrue(getKeyVal(payload, key).(bool))
+		return !booleanTrue(valInterface)
 	}
 	return false
 }
 
-func stringEqual(value, test string) bool {
-	return value == test
+func stringEqual(value interface{}, test string) bool {
+	return value.(string) == test
 }
-func stringInclude(value, test string) bool {
+func stringInclude(value interface{}, test string) bool {
+	v := value.(string)
 	for _, s := range strings.Split(test, ",") {
-		if value == s {
+		if v == s {
 			return true
 		}
 	}
 	return false
 }
-func booleanTrue(value bool) bool {
-	return value == true
+func booleanTrue(value interface{}) bool {
+	return value.(bool) == true
 }
-func getKeyVal(payload map[string]interface{}, key string) interface{} {
-	return payload[key]
+func getKeyVal(payload map[string]interface{}, rawkey string) interface{} {
+	keys := strings.Split(rawkey, ".")
+	if len(keys) == 1 {
+		return payload[keys[0]]
+	}
+
+	var val interface{} = payload[keys[0]]
+	for i := 1; i < len(keys); i++ {
+		val = val.(map[string]interface{})[keys[i]]
+	}
+	return val
+}
+
+func checkNilInterface(i interface{}) bool {
+	iv := reflect.ValueOf(i)
+	if !iv.IsValid() {
+		return true
+	}
+	switch iv.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
+		return iv.IsNil()
+	default:
+		return false
+	}
 }
