@@ -12,6 +12,8 @@ const BOOLEAN_TRUE = "bt"
 const BOOLEAN_FALSE = "bf"
 const EFFECT_ALLOW = "a"
 const EFFECT_DENNY = "d"
+const EFFECT_FORWARD_ALLOW = "fa"
+const EFFECT_FORWARD_DENY = "fd"
 
 func AttributeMatch(payload map[string]interface{}, resourceMatcher []string) bool {
 	for _, selector := range resourceMatcher {

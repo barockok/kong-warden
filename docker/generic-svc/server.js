@@ -14,7 +14,13 @@ var logger = (req, res, next) => {
   console.log([req.method, req.url, res.statusCode].join(" - "))
 }
 
+var wardenForwardPermission = (req, res, next) => {
+  res.set({'X-Warden-Permissions-Forwarded' : req.header('X-Warden-Permissions-Forward')})
+  next()
+}
+
 app.use(logger)
+app.use(wardenForwardPermission)
 app.use(express.json());
 
 

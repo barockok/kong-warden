@@ -16,6 +16,7 @@ const actionTagRE = "warden-action:(.*)"
 const errorActionTagNotFound = "Action Tag Not Found"
 const errorPermissionNotFound = "Permission Not Found"
 const HeaderWardenPermissions = "X-Warden-Permissions"
+const HeaderWardenPermissionsForward = "X-Warden-Permissions-Forward"
 
 func actionTagMatcher(s string) string {
 	re := regexp.MustCompile(actionTagRE)
@@ -54,12 +55,28 @@ func FindPermission(action string, abilities []WardenPermission) (WardenPermissi
 	}
 	return WardenPermission{}, errors.New(errorPermissionNotFound)
 }
+
+func ForwadEffect(kong *pdk.PDK, permission WardenPermission) {
+	headerVal := []string{}
+	for _, s := range permission.Selector {
+		if strings.HasPrefix(s, EFFECT_FORWARD_ALLOW) || strings.HasPrefix(s, EFFECT_FORWARD_DENY) {
+			headerVal = append(headerVal, s)
+		}
+	}
+	headerValStr, err := json.Marshal(headerVal)
+	if err != nil {
+		kong.Log.Warn(fmt.Sprintf("[warden] cannot decode forwardEffect %v", err))
+		return
+	}
+	kong.ServiceRequest.AddHeader(HeaderWardenPermissionsForward, string(headerValStr))
+}
 func EvaluateSelector(kong *pdk.PDK, permission WardenPermission) bool {
 	httpMethod, err := kong.Request.GetMethod()
 	if err != nil {
 		return true
 	}
 
+	ForwadEffect(kong, permission)
 	contentType, err := kong.Request.GetHeader("Content-Type")
 	if err != nil {
 		return true
