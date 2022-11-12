@@ -93,12 +93,13 @@ services:
         
   people_service:
     build:
-      context: ./docker/generic-svc
+      context: ./docker/go-svc
     restart: always
     volumes: 
       - ./docker/data/people.json:/app/people.json
     environment:
-      DATA_FILE: ./people.json
+      DB_FILE: ./people.json
+      PORT: 4001
     ports:
       - 4001:4001
   
