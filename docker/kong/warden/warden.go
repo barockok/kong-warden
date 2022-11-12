@@ -59,8 +59,11 @@ func FindPermission(action string, abilities []WardenPermission) (WardenPermissi
 func ForwadEffect(kong *pdk.PDK, permission WardenPermission) {
 	headerVal := []string{}
 	for _, s := range permission.Selector {
-		if strings.HasPrefix(s, EFFECT_FORWARD_ALLOW) || strings.HasPrefix(s, EFFECT_FORWARD_DENY) {
-			headerVal = append(headerVal, s)
+		if strings.HasPrefix(s, EFFECT_FORWARD_ALLOW) {
+			headerVal = append(headerVal, fmt.Sprintf("%s%s", EFFECT_ALLOW, strings.TrimPrefix(s, EFFECT_FORWARD_ALLOW)))
+		}
+		if strings.HasPrefix(s, EFFECT_FORWARD_DENY) {
+			headerVal = append(headerVal, fmt.Sprintf("%s%s", EFFECT_DENNY, strings.TrimPrefix(s, EFFECT_FORWARD_DENY)))
 		}
 	}
 	headerValStr, err := json.Marshal(headerVal)
