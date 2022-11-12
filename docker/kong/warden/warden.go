@@ -3,15 +3,18 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/Kong/go-pdk"
 	"github.com/Kong/go-pdk/server"
+	"golang.org/x/exp/slices"
 )
 
 const actionTagRE = "warden-action:(.*)"
 const errorActionTagNotFound = "Action Tag Not Found"
+const errorAbilityNotFound = "Ability Not Found"
 const HeaderWardenAbilities = "X-Warden-Abilities"
 
 func actionTagMatcher(s string) string {
@@ -31,11 +34,48 @@ var Version = "0.2"
 var Priority = 1
 
 type Config struct {
-	Message string
+	ActionName string `json:"actionName"`
 }
 
 func New() interface{} {
 	return &Config{}
+}
+
+type WardenAbility struct {
+	Action   string   `json:"a"`
+	Selector []string `json:"s"`
+}
+
+func FindAbility(action string, abilities []WardenAbility) (WardenAbility, error) {
+	for _, ability := range abilities {
+		if action == ability.Action {
+			return ability, nil
+		}
+	}
+	return WardenAbility{}, errors.New(errorAbilityNotFound)
+}
+func EvaluateSelector(kong *pdk.PDK, ability WardenAbility) bool {
+	httpMethod, err := kong.Request.GetMethod()
+	if err != nil {
+		return true
+	}
+
+	contentType, err := kong.Request.GetHeader("Content-Type")
+	if err != nil {
+		return true
+	}
+
+	if slices.Index([]string{"post", "put", "patch"}, strings.ToLower(httpMethod)) > -1 && contentType == "application/json" {
+		rawBody, err := kong.Request.GetRawBody()
+		if err != nil {
+			return true
+		}
+		var payload map[string]interface{}
+		json.Unmarshal(rawBody, &payload)
+		return AttributeMatch(payload, ability.Selector)
+	}
+
+	return true
 }
 
 func GetRouteAction(kong *pdk.PDK) (string, error) {
@@ -52,57 +92,35 @@ func GetRouteAction(kong *pdk.PDK) (string, error) {
 	return "", errors.New(errorActionTagNotFound)
 }
 
-type WardenAbility struct {
-	Action string `json:"action"`
-}
-
-func EvaluateAbility(action, rawWardenAbility string) bool {
-	var abilities []WardenAbility
-	json.Unmarshal([]byte(rawWardenAbility), &abilities)
-	for _, ability := range abilities {
-		if action == ability.Action {
-			return true
-		}
-	}
-	return false
-}
-
-func (conf Config) Access(kong *pdk.PDK) {
+func (conf *Config) Access(kong *pdk.PDK) {
 	action, err := GetRouteAction(kong)
 	if err != nil {
-		log.Printf("[Warning] Get Route Action, %s", err.Error())
+		kong.Log.Err(fmt.Sprintf("[warden] action not found in route tag %v", err))
+		kong.Response.ExitStatus(403)
+		return
 	}
 
-	warWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
-
+	rawWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
 	if err != nil {
-		log.Printf("[Warning] Get Warnden Ability, %s", err.Error())
+		kong.Log.Err(fmt.Sprintf("[warden] ability header not present %v", err))
+		kong.Response.ExitStatus(403)
+		return
 	}
 
 	kong.Response.SetHeader("x-warden-action", action)
-	kong.Response.SetHeader("x-warden-ability", warWardenAbility)
+	kong.Response.SetHeader("x-warden-ability", rawWardenAbility)
 
-	if !EvaluateAbility(action, warWardenAbility) {
-		kong.Response.ExitStatus(403)
-	}
-}
+	var parsedWardenAbility []WardenAbility
+	json.Unmarshal([]byte(rawWardenAbility), &parsedWardenAbility)
 
-func (conf Config) Response(kong *pdk.PDK) {
-	action, err := GetRouteAction(kong)
+	ability, err := FindAbility(action, parsedWardenAbility)
 	if err != nil {
-		log.Printf("[Warning] Get Route Action, %s", err.Error())
-	}
-
-	warWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
-
-	if err != nil {
-		log.Printf("[Warning] Get Warnden Ability, %s", err.Error())
-	}
-
-	kong.Response.SetHeader("x-warden-action", action)
-	kong.Response.SetHeader("x-warden-ability", warWardenAbility)
-
-	if !EvaluateAbility(action, warWardenAbility) {
 		kong.Response.ExitStatus(403)
+		return
+	}
+
+	if !EvaluateSelector(kong, ability) {
+		kong.Response.ExitStatus(403)
+		return
 	}
 }

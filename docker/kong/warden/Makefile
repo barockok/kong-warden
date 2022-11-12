@@ -1,2 +1,3 @@
 build:
-	go build warden.go
+	go build -buildmode=default
+	mv kong-warden warden

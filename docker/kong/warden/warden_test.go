@@ -26,24 +26,3 @@ func TestMatcherTag(t *testing.T) {
 	}
 
 }
-
-func TestActionEvaluate(t *testing.T) {
-	type matchingBoolString struct {
-		action     string
-		rawAbility string
-		result     bool
-	}
-	for i, skena := range []matchingBoolString{
-		{
-			action:     "people.view",
-			rawAbility: `[{"action": "people.view"}]`,
-			result:     true,
-		},
-	} {
-		t.Run(fmt.Sprintf("skena %d, action : %s", i, skena.action), func(t *testing.T) {
-			if EvaluateAbility(skena.action, skena.rawAbility) != skena.result {
-				t.Error("not matching")
-			}
-		})
-	}
-}
