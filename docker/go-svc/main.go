@@ -52,7 +52,9 @@ func main() {
 	e.PUT("/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		resultData := findRecordById(id)
-
+		if authzE := AuthorizeResource(c, resultData); authzE != nil {
+			return authzE
+		}
 		if checkNilInterface(resultData) {
 			return c.JSON(404, map[string]string{"message": "notfound"})
 		}
@@ -75,7 +77,15 @@ func main() {
 	})
 
 	e.GET("/", func(c echo.Context) error {
-		return c.JSON(200, map[string]interface{}{"data": readDb()})
+		filteredData := []map[string]interface{}{}
+		permission := c.Get(WardenPermissionEchoKey).(*warden.PrimitiveQuery)
+		for _, d := range readDb() {
+			dd := d.(map[string]interface{})
+			if permission.Match(dd) {
+				filteredData = append(filteredData, dd)
+			}
+		}
+		return c.JSON(200, map[string]interface{}{"data": filteredData})
 	})
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
