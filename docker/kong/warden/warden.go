@@ -14,8 +14,8 @@ import (
 
 const actionTagRE = "warden-action:(.*)"
 const errorActionTagNotFound = "Action Tag Not Found"
-const errorAbilityNotFound = "Ability Not Found"
-const HeaderWardenAbilities = "X-Warden-Abilities"
+const errorPermissionNotFound = "Permission Not Found"
+const HeaderWardenPermissions = "X-Warden-Permissions"
 
 func actionTagMatcher(s string) string {
 	re := regexp.MustCompile(actionTagRE)
@@ -41,20 +41,20 @@ func New() interface{} {
 	return &Config{}
 }
 
-type WardenAbility struct {
+type WardenPermission struct {
 	Action   string   `json:"a"`
 	Selector []string `json:"s"`
 }
 
-func FindAbility(action string, abilities []WardenAbility) (WardenAbility, error) {
-	for _, ability := range abilities {
-		if action == ability.Action {
-			return ability, nil
+func FindPermission(action string, abilities []WardenPermission) (WardenPermission, error) {
+	for _, permission := range abilities {
+		if action == permission.Action {
+			return permission, nil
 		}
 	}
-	return WardenAbility{}, errors.New(errorAbilityNotFound)
+	return WardenPermission{}, errors.New(errorPermissionNotFound)
 }
-func EvaluateSelector(kong *pdk.PDK, ability WardenAbility) bool {
+func EvaluateSelector(kong *pdk.PDK, permission WardenPermission) bool {
 	httpMethod, err := kong.Request.GetMethod()
 	if err != nil {
 		return true
@@ -72,7 +72,7 @@ func EvaluateSelector(kong *pdk.PDK, ability WardenAbility) bool {
 		}
 		var payload map[string]interface{}
 		json.Unmarshal(rawBody, &payload)
-		return AttributeMatch(payload, ability.Selector)
+		return AttributeMatch(payload, permission.Selector)
 	}
 
 	return true
@@ -100,26 +100,26 @@ func (conf *Config) Access(kong *pdk.PDK) {
 		return
 	}
 
-	rawWardenAbility, err := kong.Request.GetHeader("X-Warden-Abilities")
+	rawWardenPermission, err := kong.Request.GetHeader("X-Warden-Permissions")
 	if err != nil {
-		kong.Log.Err(fmt.Sprintf("[warden] ability header not present %v", err))
+		kong.Log.Err(fmt.Sprintf("[warden] permission header not present %v", err))
 		kong.Response.ExitStatus(403)
 		return
 	}
 
 	kong.Response.SetHeader("x-warden-action", action)
-	kong.Response.SetHeader("x-warden-ability", rawWardenAbility)
+	kong.Response.SetHeader("x-warden-permission", rawWardenPermission)
 
-	var parsedWardenAbility []WardenAbility
-	json.Unmarshal([]byte(rawWardenAbility), &parsedWardenAbility)
+	var parsedWardenPermission []WardenPermission
+	json.Unmarshal([]byte(rawWardenPermission), &parsedWardenPermission)
 
-	ability, err := FindAbility(action, parsedWardenAbility)
+	permission, err := FindPermission(action, parsedWardenPermission)
 	if err != nil {
 		kong.Response.ExitStatus(403)
 		return
 	}
 
-	if !EvaluateSelector(kong, ability) {
+	if !EvaluateSelector(kong, permission) {
 		kong.Response.ExitStatus(403)
 		return
 	}
