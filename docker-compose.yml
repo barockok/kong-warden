@@ -1,15 +1,23 @@
 version: '3.8'
-
+volumes:
+ buildout: 
+  
 
 services:
+  builder:
+    build:
+      context: ./
+    volumes:
+      - buildout:/app/out:rw
+    command: >
+      echo "0"
   kong:
     platform: linux/amd64
-    build:
-      context: ./docker/kong
+    image: kong:3.3.1-alpine
     container_name: kong
     depends_on:
-      kong_migrations:
-        condition: service_completed_successfully
+      kong_migrations: {condition: service_completed_successfully}
+      builder: {condition: service_completed_successfully} 
     environment:
       - KONG_PROXY_ACCESS_LOG=/dev/stdout
       - KONG_ADMIN_ACCESS_LOG=/dev/stdout
@@ -31,7 +39,9 @@ services:
       - 8001:8001
       - 8444:8444
       - 8002:8002
-    command: [ "kong", "start"]
+    command: ["kong", "start"]
+    volumes:
+      - buildout:/kong/go-plugins
   
   kong_db:
     image: postgres:9.6-alpine
@@ -58,8 +68,7 @@ services:
       - KONG_PG_USER=kong
       - KONG_PG_PASSWORD=kong
     depends_on:
-      kong_db:
-        condition: service_healthy
+      kong_db: {condition: service_healthy}
 
   konga:
     image: pantsel/konga:0.14.9
@@ -71,8 +80,7 @@ services:
       - DB_USER=kong
       - DB_PASSWORD=kong
     depends_on:
-      kong_db:
-        condition: service_healthy
+      kong_db: {condition: service_healthy}
     ports:
       - 1337:1337
   
@@ -95,18 +103,20 @@ services:
       - ./docker/data/kong.yaml:/kong.yaml
     command: ["sync", "--kong-addr", "http://kong:8001"]
     depends_on:
-      kong:
-        condition: service_healthy
+      kong: {condition: service_healthy}
   
   people_service:
-    build:
-      context: ./docker/go-svc
-    restart: always
+    image: alpine:latest
     volumes: 
       - ./docker/data/people.json:/app/people.json
+      - buildout:/app
     environment:
       DB_FILE: ./people.json
       PORT: 4001
+    working_dir: /app
     ports:
       - 4001:4001
+    depends_on:
+      builder: {condition: service_completed_successfully} 
+    command: ["./svc"]
   
