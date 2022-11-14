@@ -91,6 +91,14 @@ services:
     command: >
       curl 'http://konga:1337/register' -H 'Content-Type: application/x-www-form-urlencoded' --data-raw 'username=kong&email=kong%40konghq.com&password=kongkong&password_confirmation=kongkong' --compressed
         
+  deck_load:
+    image: kong/deck:latest
+    links:
+      - kong
+    volumes: 
+      - ./docker/data/kong.yaml:/kong.yaml
+    command: ["sync", "--kong-addr", "http://kong:8001"]
+  
   people_service:
     build:
       context: ./docker/go-svc

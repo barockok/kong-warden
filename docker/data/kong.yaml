@@ -1,0 +1,94 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  enabled: true
+  host: people_service
+  name: people-service
+  path: /
+  port: 4001
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    methods:
+    - POST
+    name: people-create
+    path_handling: v1
+    paths:
+    - /people/
+    plugins:
+    - config:
+        actionName: x
+      enabled: true
+      name: warden
+      protocols:
+      - grpc
+      - grpcs
+      - http
+      - https
+    preserve_host: false
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - warden-action:people-create
+  - https_redirect_status_code: 426
+    methods:
+    - GET
+    name: people-index
+    path_handling: v1
+    paths:
+    - /people/
+    plugins:
+    - config:
+        actionName: a
+      enabled: true
+      name: warden
+      protocols:
+      - grpc
+      - grpcs
+      - http
+      - https
+    preserve_host: false
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - warden-action:people-index
+  - https_redirect_status_code: 426
+    methods:
+    - PUT
+    name: people-update
+    path_handling: v1
+    paths:
+    - /people/
+    plugins:
+    - config:
+        actionName: people-update
+      enabled: true
+      name: warden
+      protocols:
+      - grpc
+      - grpcs
+      - http
+      - https
+    preserve_host: false
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: true
+    tags:
+    - warden-action:people-update
+  write_timeout: 60000
