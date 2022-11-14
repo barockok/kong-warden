@@ -70,6 +70,9 @@ func main() {
 	e.POST("/", func(c echo.Context) error {
 		p := make(map[string]interface{})
 		err := c.Bind(&p)
+		if authzE := AuthorizeResource(c, p); authzE != nil {
+			return authzE
+		}
 		if err != nil {
 			return err
 		}
